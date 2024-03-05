@@ -1,0 +1,343 @@
+
+#include <ctype.h>
+#include <locale.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// struct criada com os parâmetros de cadastro que queremos utilizar
+typedef struct {
+  int id;
+  char nome[100];
+  int idade;
+  float saldo_atual;
+} Usuarios;
+
+int get_contador_atual() {
+  FILE *arquivo = fopen("dados_usuarios.txt", "r");
+
+  if (arquivo == NULL) {
+    return 0;
+  }
+
+  char linha[100];
+  int contador = 0;
+
+  while (1) {
+    // Em caso de EOF
+    if (fgets(linha, 99, arquivo) == NULL) {
+      fclose(arquivo);
+      return contador;
+    }
+
+    // Em caso de linha vazia
+    if (linha[0] == '\0') {
+      fclose(arquivo);
+      return contador;
+    }
+
+    sscanf(linha, "%d", &contador);
+  }
+}
+
+int main() {
+
+  setlocale(LC_ALL, "Portuguese"); // Permite gramática de língua portuguesa
+  FILE *arquivo;
+  FILE *
+      arquivoTemp; // declarando um arquivo para armazenar os dados dos usuários
+  float saldo_final, saldo_atual;
+  int qntd_user, contador, buscar_id, valor, id_excluir, i;
+  int encontrado = 0;
+  char linha[100];
+  char confirmacao;
+  char operacao;
+  contador = get_contador_atual();
+
+  // Menu que aparece para o usuário
+  while (1) {
+    puts("MENU");
+    puts("1.Cadastrar usuário");
+    puts("2.Consulta usuário");
+    puts("3.Transferência entre usuários");
+    puts("4.Remover usuário");
+    puts("5.Sair\n");
+    scanf(" %c", &operacao);
+    printf("Opcao digitada: %c\n", operacao);
+    puts("\nVocê confirma a opção?");
+    puts("1.Sim");
+    puts("2.Não");
+    scanf(" %c", &confirmacao); // Usuário escolhe confirmar ou não
+
+    if (confirmacao == '1') {
+      // operação de cadastro de usuário
+      if (operacao == '1') {
+        // Quantidade de usuários querem cadastrar
+        printf("\nDigite a quantidade de usuário(s) a cadastrar: ");
+        scanf("%d", &qntd_user);
+        // caso a quantidade seja 0 ou menor que zero
+        if (qntd_user <= 0) {
+          printf("Quantidade de usuário inválida.\n");
+        }
+        // caso geral: quando a quantidade for maior ou igual a 1
+        else if (qntd_user >= 1) {
+          Usuarios *vet = (Usuarios *)malloc(qntd_user * sizeof(Usuarios));
+          for (i = 0; i < qntd_user; i++) {
+            contador = contador + 1;
+            vet[i].id = contador;
+            printf("\nId: %d", vet[i].id);
+            fflush(stdin);
+            printf("\nNome: ");
+            scanf(" %99[^\n]", vet[i].nome); // usuário insere o nome
+
+            printf("\nIdade: ");
+            scanf("%d", &vet[i].idade); // usuário insere a idade
+
+            // verficar idade negativa
+            if (vet[i].idade < 0) {
+              printf("Idade inválida\n");
+              printf("\n");
+              break;
+            }
+            printf("\nSaldo_atual: ");
+            scanf("%f", &vet[i].saldo_atual); // usuario insere o saldo atual
+            // printf("%.2f", vet[i].saldo_atual); > na minha opiniao n precisa
+            // disso - verificar com dani abrindo o arquivo
+            FILE *arquivo = fopen("dados_usuarios.txt", "a");
+            // se não existir conteúdo no arquivo
+            if (arquivo == NULL) {
+              printf("Erro ao abrir arquivo!\n");
+              return 1;
+            }
+
+            fprintf(arquivo, "%d,%s,%d,%f\n", vet[i].id, vet[i].nome,
+                    vet[i].idade, vet[i].saldo_atual);
+            fclose(arquivo);
+            fflush(stdin);
+            printf("\n");
+          }
+        }
+
+      }
+      // operaçao 2: Buscando o usuário desejado
+      else if (operacao == '2') {
+        printf("Digite o id que deseja buscar: ");
+        scanf("%d", &buscar_id);
+
+        arquivo = fopen("dados_usuarios.txt", "r");
+        if (arquivo == NULL) {
+          printf("Erro ao abrir arquivo!");
+          return 1;
+        }
+
+        fseek(arquivo, 0, SEEK_SET);
+        int encontrou = 0;
+        while (fgets(linha, sizeof(linha), arquivo) != NULL) {
+          int valor;
+          if (sscanf(linha, "%d", &valor) == 1) {
+            if (valor == buscar_id) {
+              printf("\nUsuario: %s", linha);
+              encontrou = 1;
+            }
+          }
+        }
+        if (encontrou == 0) {
+          printf("\nUsuário não existe.\n");
+          printf("\n");
+        }
+
+        fclose(arquivo);
+        fflush(stdin);
+      }
+
+      else if (operacao == '3') {
+        int id_origem, id_destino, conta_virgula = 0;
+        float saldo_origem, saldo_destino, saldo_transferencia;
+        char linha_origem[100], linha_destino[100];
+
+        printf("\nDigite o id do usuário de origem:");
+        scanf("%d", &id_origem);
+
+        printf("\nDigite o saldo de transferêcia:");
+        scanf("%f", &saldo_transferencia);
+
+        if (saldo_transferencia < 0) {
+          printf("\nSaldo de transferência inválido.");
+        }
+
+        printf("\nDigite o id do usuário de destino:");
+        scanf("%d", &id_destino);
+        printf("\n");
+
+        arquivo = fopen("dados_usuarios.txt", "r");
+        if (arquivo == NULL) {
+          printf("Erro ao abrir arquivo!");
+          return 1;
+        }
+
+        fseek(arquivo, 0, SEEK_SET);
+        int encontrou_origem = 0;
+        while (fgets(linha_origem, sizeof(linha_origem), arquivo) != NULL) {
+          int valor;
+          if (sscanf(linha_origem, "%d", &valor) == 1) {
+            if (valor == id_origem) {
+              encontrou_origem = 1;
+              break;
+            }
+          }
+        }
+
+        if (encontrou_origem == 0) {
+          printf("Usuário de origem não existe.");
+          printf("\n");
+        }
+
+        for (int i = 0; i < strlen(linha_origem); ++i) {
+          if (linha_origem[i] == ',') {
+            ++conta_virgula;
+          }
+          if (conta_virgula == 3) {
+            sscanf(linha_origem + i + 1, "%f", &saldo_origem);
+            linha_origem[i + 1] = '\0';
+          }
+        }
+
+        fseek(arquivo, 0, SEEK_SET);
+        int encontrou_destino = 0;
+        while (fgets(linha_destino, sizeof(linha_destino), arquivo) != NULL) {
+          int valor = 0;
+          if (sscanf(linha_destino, "%d", &valor) == 1) {
+            if (valor == id_destino) {
+              encontrou_destino = 1;
+              break;
+            }
+          }
+        }
+
+        if (encontrou_destino == 0) {
+          printf("Usuário de destino não existe.");
+          printf("\n");
+        }
+
+        conta_virgula = 0;
+        for (int i = 0; i < strlen(linha_destino); ++i) {
+          if (linha_destino[i] == ',') {
+            ++conta_virgula;
+          }
+          if (conta_virgula == 3) {
+            sscanf(linha_destino + i + 1, "%f", &saldo_destino);
+            linha_destino[i + 1] = '\0';
+            break;
+          }
+        }
+
+        if (saldo_origem <= 0 || saldo_origem < saldo_transferencia) {
+          printf("%d\n", saldo_origem);
+          printf(
+              "Transferência não pode ser realizada por saldo insuficiente.");
+          printf("\n");
+        }
+
+        else {
+          saldo_destino = saldo_destino + saldo_transferencia;
+          saldo_origem = saldo_origem - saldo_transferencia;
+        }
+
+        arquivoTemp = fopen("temp_dados_usuarios.txt", "w");
+        if (arquivoTemp == NULL) {
+          printf("Erro ao abrir o arquivo temporário!\n");
+          fclose(arquivo);
+          return 1;
+        }
+
+        fseek(arquivo, 0, SEEK_SET);
+        while (fgets(linha, sizeof(linha), arquivo) != NULL) {
+          int idLido;
+          sscanf(linha, "%d", &idLido);
+
+          if (idLido != id_origem && idLido != id_destino) {
+            fputs(linha, arquivoTemp);
+          } else if (idLido == id_origem) {
+            fprintf(arquivoTemp, "%s%.2f\n", linha_origem, saldo_origem);
+          } else if (idLido == id_destino) {
+            fprintf(arquivoTemp, "%s%.2f\n", linha_destino, saldo_destino);
+          }
+        }
+
+        fclose(arquivo);
+        fclose(arquivoTemp); // fecha arquivo temporario
+
+        if (remove("dados_usuarios.txt") != 0) {
+          printf("Erro ao remover o arquivo original!\n");
+          return 1;
+        }
+        // renomear arquivo temporario para nome do arquivo original
+
+        if (rename("temp_dados_usuarios.txt", "dados_usuarios.txt") != 0) {
+          printf("Erro ao renomear o arquivo temporário!\n");
+          return 1;
+        }
+      } else if (operacao == '4') {
+
+        arquivo = fopen("dados_usuarios.txt", "r");
+        if (arquivo == NULL) {
+          printf("Erro ao abrir o arquivo de leitura!\n");
+          return 1;
+        }
+        // criando arquivo temporário
+
+        arquivoTemp = fopen("temp_dados_usuarios.txt", "w");
+        if (arquivoTemp == NULL) {
+          printf("Erro ao abrir o arquivo temporário!\n");
+          fclose(arquivo);
+          return 1;
+        }
+
+        printf("Digite o ID a ser excluído: ");
+        scanf("%d", &id_excluir);
+        printf("\n");
+
+        while (fgets(linha, sizeof(linha), arquivo) != NULL) {
+          int idLido;
+          sscanf(linha, "%d", &idLido);
+
+          if (idLido != id_excluir) {
+            fputs(linha, arquivoTemp);
+          } else {
+            encontrado = 1;
+          }
+        }
+
+        // verifica se a linha foi encontrada
+        if (!encontrado) {
+          printf("ID não encontrado no arquivo.\n");
+          printf("\n");
+        }
+        fclose(arquivo);
+        fclose(arquivoTemp); // fecha arquivo temporario
+
+        if (remove("dados_usuarios.txt") != 0) {
+          printf("Erro ao remover o arquivo original!\n");
+          return 1;
+        }
+        // renomear arquivo temporario para nome do arquivo original
+
+        if (rename("temp_dados_usuarios.txt", "dados_usuarios.txt") != 0) {
+          printf("Erro ao renomear o arquivo temporário!\n");
+          return 1;
+        }
+
+      } else if (operacao == '5') {
+        printf("Operação finalizada.");
+        return 0;
+      } else {
+        printf("Operação inválida.");
+        printf("\n");
+      }
+    } else {
+      printf("Tente novamente!");
+    }
+  }
+
+  return 0;
+}
